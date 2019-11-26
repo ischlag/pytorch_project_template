@@ -88,25 +88,20 @@ if n_gpus > 1:
 
 
 from trainer.BasicTrainer import BasicTrainer
-p.log_every_n_steps = 10
+p.log_every_n_steps = 25
 p.eval_every_n_steps = 100
 p.log_folder = "logs/"
+p.max_steps = -1
 trainer = BasicTrainer(model=model,
                        params=p,
-                       train_iterator=iter(train_generator),
-                       eval_iterator=iter(valid_generator),
+                       train_generator=train_generator,
+                       eval_generator=valid_generator,
                        optimizer=optimizer,
                        criterion=criterion,
                        log=lambda x: print(x))
 
-
 trainer.train()
 
 
-def gen():
-  for i in range(5):
-    yield i
-
-
-it = iter(gen())
-next(it)
+trainer.save_state()
+trainer.load_state()

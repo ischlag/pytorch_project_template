@@ -1,41 +1,53 @@
+# Basic Trainer
 #
-#
-#
+# Features:
+# - saves best/last model after evaluation
+# - uses log function to log terminal text
+# -
 
 import os
-import time
 import torch
 import numpy as np
 from utils.lib import assert_entries_exist, terminal_format, StopWatch
 from utils.Map import Map
 
+BEST_MODEL_FILE_NAME = "best_eval_state.pt"
+LAST_MODEL_FILE_NAME = "last_eval_state.pt"
+NECESSARY_PARAMS = [
+  "log_every_n_steps",
+  "eval_every_n_steps",
+  "device",
+  "log_folder",
+  "max_steps"
+]
 
 class BasicTrainer:
-  def __init__(self, model, params, train_iterator, eval_iterator,
+  def __init__(self, model, params, train_generator, eval_generator,
                optimizer, criterion, log):
-    assert_entries_exist(params, ["log_every_n_steps",
-                                  "eval_every_n_steps",
-                                  "device",
-                                  "log_folder"])
+    assert_entries_exist(params, NECESSARY_PARAMS)
     self.p = params
     self.model = model.to(self.p.device)
     self.optimizer = optimizer
     self.criterion = criterion
-
-    self.train_iterator = train_iterator
-    self.eval_iterator = eval_iterator
+    self.train_generator = train_generator
+    self.train_iterator = iter(self.train_generator)
+    self.eval_generator = eval_generator
     self.log = log
 
+    # captures a restorable state
     self.state = Map()
     self.state.global_step = 0
     self.state.train_time = 0  # hours
+    self.state.epochs = 0
     self.state.best_eval_loss = float("inf")
     self.state.best_eval_acc = 0
     self.state.best_train_time = 0  # hours
     self.state.best_step = 0
 
     self.best_eval_state_path = os.path.join(self.p.log_folder,
-                                             "best_eval_state.pt")
+                                             BEST_MODEL_FILE_NAME)
+    self.last_eval_state_path = os.path.join(self.p.log_folder,
+                                             LAST_MODEL_FILE_NAME)
 
   def _forward(self, x, y, voi):
     """ Compute a train/eval forward pass and update the variables
@@ -65,7 +77,14 @@ class BasicTrainer:
     train_voi.stopwatch = StopWatch()
     train_voi.batches = 0
 
-    for x, y in self.train_iterator:
+    while self.state.global_step < self.p.max_steps or self.p.max_steps == -1:
+      # get next batch but reset iterator if epoch is over
+      try:
+        x, y = next(self.train_iterator)
+      except StopIteration:
+        self.state.epochs += 1
+        self.train_iterator = iter(self.train_generator)
+
       # move batch to accelerator
       x = x.to(self.p.device)
       y = y.to(self.p.device)
@@ -96,6 +115,7 @@ class BasicTrainer:
         # write terminal and file summaries
         vars = [
           ("train", ""),
+          ("ep", self.state.epochs, ""),
           ("step", self.state.global_step, ":4"),
           ("loss", avg_loss, ":.5f"),
           ("acc", avg_acc, ":.3f"),
@@ -105,7 +125,7 @@ class BasicTrainer:
         self.log(terminal_format(vars))
 
         # write tensorboard summaries
-        # ...
+        # TODO
 
         # clear
         train_voi.stopwatch.restart()
@@ -119,9 +139,11 @@ class BasicTrainer:
         self.model.train()
         train_voi.stopwatch.restart()
 
-  def evaluate(self, save_best=False, iterator=None, write_logs=False):
-    if iterator is None:
-      iterator = self.eval_iterator
+  def evaluate(self, save_best=False, generator=None, write_logs=False):
+    if generator is None:
+      iterator = iter(self.eval_generator)
+    else:
+      iterator = iter(generator)
 
     self.model.eval()
 
@@ -157,9 +179,12 @@ class BasicTrainer:
       self.state.best_eval_acc = avg_acc
       self.state.best_train_time = self.state.train_time
       self.state.best_step = self.state.global_step
-      # save model
+      # save best state so far
       if save_best and write_logs:
-        self.save_state()
+        self.save_state(target=self.best_eval_state_path)
+
+    # save current state
+    self.save_state(target=self.last_eval_state_path)
 
     # write terminal and file summaries
     vars = [
@@ -171,21 +196,27 @@ class BasicTrainer:
       ("loss", self.state.best_eval_loss, ":.5f"),
       ("acc", self.state.best_eval_acc, ":.3f"),
     ]
-    self.log("\n")
+    self.log("")
     self.log(terminal_format(vars))
+    self.log("")
 
     # write tensorboard summaries
-    # ...
+    # TODO
 
-  def save_state(self):
-    curr_state = self.state
-    curr_state.model = self.model.state_dict()
-    curr_state.optimizer = self.optimizer.state_dict()
-    #torch.save(obj=curr_state, f=self.best_eval_state_path)
+  def save_state(self, target):
+    # Apparently that Map() returns None for __getattr__ which results in an
+    # error when one tries to pickle it.
+    curr_state = {
+      "state": self.state.__dict__,
+      "model": self.model.state_dict(),
+      "optimizer": self.optimizer.state_dict()
+    }
+    torch.save(obj=curr_state, f=target)
 
   def load_state(self, path=None):
     if path is None:
       path = self.best_eval_state_path
-    self.state = torch.load(path)
-    self.model.load_state_dict(self.state.model)
-    self.optimizer.load_state_dict(self.state.optimizer)
+    curr_state = torch.load(path)
+    self.model.load_state_dict(curr_state["model"])
+    self.optimizer.load_state_dict(curr_state["optimizer"])
+    self.state.__dict__ = curr_state["state"]
