@@ -48,3 +48,9 @@ class Map(dict):
     # is called when: del m["a"]
     super(Map, self).__delitem__(key)
     del self.__dict__[key]
+
+  def __getdict__(self):
+    return self.__getdict__
+
+  def __setdict__(self, dict):
+    self.__dict__ = dict

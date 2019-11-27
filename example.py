@@ -21,12 +21,51 @@ p.learning_rate=1e-3
 p.epochs=600
 p.batch_size = 32
 # model
-p.h_size = 1024
+# ...
 # other
+# ...
+
 p.device = device
 p.n_gpus = n_gpus
-#p.log_folder = "logs/encoder_miniSprites/{}_h{}_lr{}_hw_last_dense_6".format(p.file_name, p.h_size, p.learning_rate)
 
+# .... model
+p.vocab_size = 180
+p.embedding_size = 200
+p.hidden_size = 256
+p.layers = 2
+# ... optimizer
+p.learning_rate = 0.001
+# ... trainer
+p.log_every_n_steps = 25
+p.eval_every_n_steps = 500
+p.log_folder = "logs/"
+p.max_steps = -1
+p.write_logs = True
+p.early_stopping_steps = -1
+
+folder_template = "logs/{}/{}/emb{}_h{}_l{}_lr{}_bs{}_gpus{}"
+folder_args = [
+  "bAbI10k",
+  "SeqClassifierLSTM",
+  p.embedding_size,
+  p.hidden_size,
+  p.layers,
+  p.learning_rate,
+  p.batch_size,
+  p.n_gpus,
+]
+p.log_folder = "logs/{}/{}/emb{}_h{}_l{}_lr{}_bs{}_gpus{}".format(*folder_args)
+
+
+from utils.lib import setup_log_folder, save_current_script, setup_logger
+if p.write_logs:
+  # setup log folder
+  setup_log_folder(p.log_folder)
+  # save source code to log folder
+  save_current_script(p.log_folder)
+
+# setup logger
+log = setup_logger(p.log_folder if p.write_logs else None)
 
 # import Dataset
 from datasets.bAbI_v1_2 import bAbI10k
@@ -53,29 +92,26 @@ train_generator = data.DataLoader(train_dataset,
 valid_generator = data.DataLoader(valid_dataset,
                                   collate_fn=collate_fn, **data_loader_params)
 
-it = iter(train_generator)
-x, y = next(it)
 
-x.shape
-y.shape
+from iterators.CustomIterator import CustomIterator
+custom_iter = CustomIterator(valid_dataset, p.PAD, data_loader_params)
+
+for i,x in enumerate(custom_iter):
+  if i % 100 == 0:
+    print(i)
+print("done")
 
 
 # build model
-p.vocab_size = 180
-p.embedding_size = 200
-p.hidden_size = 256
-p.layers = 2
-
 from models.sequence_classification_lstm import SeqClassifierLSTM
 model = SeqClassifierLSTM(p)
 
 # optimizer
-optimizer = torch.optim.Adam(params=model.parameters())
-
+optimizer = torch.optim.Adam(params=model.parameters(),
+                             lr=p.learning_rate)
 
 # loss
 criterion = nn.CrossEntropyLoss(ignore_index=p.PAD)
-
 
 # parallize
 """
@@ -88,20 +124,12 @@ if n_gpus > 1:
 
 
 from trainer.BasicTrainer import BasicTrainer
-p.log_every_n_steps = 25
-p.eval_every_n_steps = 100
-p.log_folder = "logs/"
-p.max_steps = -1
 trainer = BasicTrainer(model=model,
                        params=p,
                        train_generator=train_generator,
                        eval_generator=valid_generator,
                        optimizer=optimizer,
                        criterion=criterion,
-                       log=lambda x: print(x))
+                       log=log)
 
 trainer.train()
-
-
-trainer.save_state()
-trainer.load_state()

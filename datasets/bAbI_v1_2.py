@@ -1,12 +1,12 @@
 import os
 import pickle
-import torch
 from torch.utils import data
 
 bAbI10k_TEMPLATE = "en-valid-10k_{}.txt"
 bAbI1k_TEMPLATE = "en-valid_{}.txt"
 PARTITIONS = ["train", "valid", "test"]
 DATA_PATH = "data/bAbI_v1.2"
+
 
 def read_samples(file_path, word2idx):
   samples = []
@@ -53,6 +53,7 @@ class bAbI1k(data.Dataset):
   def __getitem__(self, index):
     x, y = self.samples[index]
     return x, y
+
 
 """
 d = bAbI1k(folder="../../data/bAbI_v1.2/", partition="train")
