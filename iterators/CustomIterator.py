@@ -1,3 +1,4 @@
+# not used currently 
 import torch
 from torch.utils import data
 from torch.nn.utils.rnn import pad_sequence
@@ -21,23 +22,32 @@ class CustomIterator:
     self.dataset = dataset
     self.pad_value = pad_value
     self.data_loader_params = data_loader_params
-    self.iterator = None
-
-  def init_dataloader(self):
     collate_fn = get_collate_fn(self.pad_value)
-    self.iterator = iter(data.DataLoader(self.dataset,
-                                         collate_fn=collate_fn,
-                                         **self.data_loader_params))
+    self.data_loader = data.DataLoader(self.dataset,
+                                       collate_fn=collate_fn,
+                                       **self.data_loader_params)
+    self.iterator = None
 
   def __iter__(self):
     return self
 
   def __next__(self):
     if self.iterator is None:
-      self.init_dataloader()
-
+      self.iterator = iter(self.data_loader)
     try:
       return next(self.iterator)
     except StopIteration:
       self.iterator = None
       raise StopIteration
+
+
+"""
+from iterators.CustomIterator import CustomIterator
+custom_iter = CustomIterator(valid_dataset, p.PAD, data_loader_params)
+
+for i,x in enumerate(custom_iter):
+  if i % 100 == 0:
+    print(i)
+print("done")
+
+"""

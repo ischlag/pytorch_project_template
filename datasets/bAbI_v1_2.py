@@ -1,6 +1,8 @@
 import os
 import pickle
+import torch
 from torch.utils import data
+from torch.nn.utils.rnn import pad_sequence
 
 bAbI10k_TEMPLATE = "en-valid-10k_{}.txt"
 bAbI1k_TEMPLATE = "en-valid_{}.txt"
@@ -19,6 +21,22 @@ def read_samples(file_path, word2idx):
       y = word2idx[target]
       samples.append((x, y))
   return samples
+
+
+def create_iterator(dataset, pad_value, data_loader_params):
+  def collate_pad_seq_classification(batch):
+    (batch_x, batch_y) = zip(*batch)
+    x = [torch.tensor(x) for x in batch_x]
+    y = torch.tensor(batch_y).unsqueeze(-1)
+
+    x_pad = pad_sequence(x, batch_first=True, padding_value=pad_value)
+    y_pad = pad_sequence(y, batch_first=True, padding_value=pad_value)
+
+    return x_pad, y_pad
+
+  return data.DataLoader(dataset,
+                         collate_fn=collate_pad_seq_classification,
+                         **data_loader_params)
 
 
 class bAbI10k(data.Dataset):

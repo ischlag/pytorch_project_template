@@ -40,7 +40,7 @@ class BasicTrainer:
     self.optimizer = optimizer
     self.criterion = criterion
     self.train_generator = train_generator
-    self.train_iterator = iter(self.train_generator)
+    self.train_iterator = iter(train_generator)
     self.eval_generator = eval_generator
     self.log = log
 
@@ -153,7 +153,7 @@ class BasicTrainer:
           ("loss", avg_loss, ":.5f"),
           ("acc", avg_acc, ":.3f"),
           ("t/s", tokens_per_sec, ":.1f"),
-          ("hours", hs, ":.5f")
+          ("hours", hs, ":.1f")
         ]
         self.log(terminal_format(vars))
 
@@ -195,9 +195,7 @@ class BasicTrainer:
 
   def evaluate(self, generator=None, write_logs=False):
     if generator is None:
-      iterator = iter(self.eval_generator)
-    else:
-      iterator = iter(generator)
+      generator = self.eval_generator
 
     self.model.eval()
 
@@ -210,7 +208,7 @@ class BasicTrainer:
     eval_voi.stopwatch = StopWatch()
 
     with torch.no_grad():
-      for x, y in iterator:
+      for x, y in generator:
         # move batch to accelerator
         x = x.to(self.p.device)
         y = y.to(self.p.device)
