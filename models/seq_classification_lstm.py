@@ -9,10 +9,10 @@ from torch.nn.utils.rnn import pad_packed_sequence
 
 
 def load_default_params(p):
-    p.vocab_size = 180
-    p.embedding_size = 200
-    p.hidden_size = 256
-    p.layers = 2
+    p["vocab_size"] = 180
+    p["embedding_size"] = 200
+    p["hidden_size"] = 256
+    p["layers"] = 2
 
 
 class Model(nn.Module):

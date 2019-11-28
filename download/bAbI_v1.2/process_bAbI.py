@@ -11,8 +11,8 @@
 # the story are separated by " ".
 
 import os
-import random
 import pickle
+import random
 
 DATASETS = ["en-valid", "en-valid-10k"]
 PARTITIONS = ["train", "valid", "test"]

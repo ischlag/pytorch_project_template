@@ -1,8 +1,8 @@
-import time
+import importlib
+import logging
 import os
 import shutil
-import logging
-import importlib
+import time
 
 
 def assert_entries_exist(map, keys):

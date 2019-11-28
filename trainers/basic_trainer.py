@@ -1,10 +1,12 @@
 import os
-import torch
+
 import numpy as np
-from utils.lib import assert_entries_exist, terminal_format, StopWatch, \
-                      add_scalars
-from utils.Map import Map
+import torch
 from tensorboardX import SummaryWriter
+
+from munch import Munch, munchify
+from utils.lib import assert_entries_exist, terminal_format, StopWatch, \
+  add_scalars
 
 BEST_MODEL_FILE_NAME = "best_eval_state.pt"
 LAST_MODEL_FILE_NAME = "last_eval_state.pt"
@@ -23,12 +25,12 @@ NECESSARY_PARAMS = [
 
 
 def load_default_params(p):
-  p.log_every_n_steps = 50
-  p.eval_every_n_steps = 500
-  p.log_folder = "logs/"
-  p.max_steps = -1
-  p.write_logs = True
-  p.early_stopping_steps = -1
+  p["log_every_n_steps"] = 50
+  p["eval_every_n_steps"] = 500
+  p["log_folder"] = "logs/"
+  p["max_steps"] = -1
+  p["write_logs"] = True
+  p["early_stopping_steps"] = -1
 
 
 class Trainer:
@@ -55,7 +57,7 @@ class Trainer:
     self.log = log
 
     # captures a restorable state
-    self.state = Map()
+    self.state = Munch()
     self.state.global_step = 0
     self.state.train_time = 0  # hours
     self.state.epochs = 0
@@ -109,7 +111,7 @@ class Trainer:
     script_stopwatch = StopWatch(self.state.script_running_time)
 
     # variables of interest (don't forget to reset them after logging)
-    train_voi = Map()
+    train_voi = Munch()
     train_voi.losses = []
     train_voi.accuracies = []
     train_voi.token_counts = []
@@ -210,7 +212,7 @@ class Trainer:
     self.model.eval()
 
     # variables of interest
-    eval_voi = Map()
+    eval_voi = Munch()
     eval_voi.losses = []
     eval_voi.accuracies = []
     eval_voi.token_counts = []
@@ -279,10 +281,8 @@ class Trainer:
       self.eval_writer.flush()
 
   def save_state(self, target):
-    # Apparently that Map() returns None for __getattr__ which results in an
-    # error when one tries to pickle it.
     curr_state = {
-      "state": self.state.__dict__,
+      "state": self.state,
       "model": self.model.state_dict(),
       "optimizer": self.optimizer.state_dict()
     }
@@ -294,4 +294,4 @@ class Trainer:
     curr_state = torch.load(path)
     self.model.load_state_dict(curr_state["model"])
     self.optimizer.load_state_dict(curr_state["optimizer"])
-    self.state = Map(curr_state["state"])
+    self.state = munchify(curr_state["state"])

@@ -1,11 +1,13 @@
-from sacred import Experiment
-from utils.Map import Map
-from utils.lib import import_and_populate
 import importlib
+
 import torch
 import torch.nn as nn
+from sacred import Experiment
+from munch import Munch, munchify, unmunchify
+
+from utils.lib import import_and_populate
 from utils.lib import setup_log_folder, save_current_script, setup_logger, \
-                      count_parameters
+  count_parameters
 
 MODELS = "models"
 TRAINERS = "trainers"
@@ -16,46 +18,44 @@ ex = Experiment("experiment")
 
 @ex.config
 def main_config():
-  p = Map()
-  p.device = torch.device("cuda")
-  p.n_gpus = torch.cuda.device_count()
+  # we cannot use a Munch here due to sacred. Don't try.
+  p = {}
+  p["device"] = torch.device("cuda")
+  p["n_gpus"] = torch.cuda.device_count()
   # data
-  p.dataset_name = "bAbI_v1_2"
-  p.dataset_variation = "bAbI10k"
-  import_and_populate(DATASETS + "." + p.dataset_name, p)
-  p.train_batch_size = 32
-  p.eval_batch_size = 64
+  p["dataset_name"] = "bAbI_v1_2"
+  p["dataset_variation"] = "bAbI10k"
+  import_and_populate(DATASETS + "." + p["dataset_name"], p)
+  p["train_batch_size"] = 32
+  p["eval_batch_size"] = 64
   # optimizer
-  p.learning_rate = 1e-3
-  p.beta1 = 0.9
-  p.beta2 = 0.999
+  p["learning_rate"] = 1e-3
+  p["beta1"] = 0.9
+  p["beta2"] = 0.999
   # model
-  p.model_name = "seq_classification_lstm"
-  import_and_populate(MODELS + "." + p.model_name, p)
+  p["model_name"] = "seq_classification_lstm"
+  import_and_populate(MODELS + "." + p["model_name"], p)
   # trainer
-  p.trainer_name = "basic_trainer"
-  import_and_populate(TRAINERS + "." + p.trainer_name, p)
+  p["trainer_name"] = "basic_trainer"
+  import_and_populate(TRAINERS + "." + p["trainer_name"], p)
   # other
   folder_template = "logs/{}/{}/emb{}_h{}_l{}_lr{}_bs{}_gpus{}"
   folder_args = [
-    p.dataset_variation,
-    p.model_name,
-    p.embedding_size,
-    p.hidden_size,
-    p.layers,
-    p.learning_rate,
-    p.train_batch_size,
-    p.n_gpus,
+    p["dataset_variation"],
+    p["model_name"],
+    p["embedding_size"],
+    p["hidden_size"],
+    p["layers"],
+    p["learning_rate"],
+    p["train_batch_size"],
+    p["n_gpus"],
   ]
-  p.log_folder = folder_template.format(*folder_args)
-  # for p to be editable on the cmd line using sacred we have to make it
-  # a dictionary
-  p = p.__dict__
+  p["log_folder"] = folder_template.format(*folder_args)
 
 
 @ex.automain
 def run(p, _log):
-  p = Map(p)
+  p = munchify(p)
   # setup log folder and backup source code
   if p.write_logs:
     setup_log_folder(p.log_folder)

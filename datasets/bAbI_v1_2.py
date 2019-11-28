@@ -1,10 +1,10 @@
+import importlib
 import os
 import pickle
-import torch
-import importlib
-from torch.utils import data
-from torch.nn.utils.rnn import pad_sequence
 
+import torch
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils import data
 
 bAbI10k_TEMPLATE = "en-valid-10k_{}.txt"
 bAbI1k_TEMPLATE = "en-valid_{}.txt"
@@ -13,10 +13,10 @@ DATA_PATH = "data/bAbI_v1.2"
 
 
 def load_default_params(p):
-    p.dataset_variation = "bAbI10k"
-    p.train_shuffle = True
-    p.eval_shuffle = False
-    p.num_workers = 6
+    p["dataset_variation"] = "bAbI10k"
+    p["train_shuffle"] = True
+    p["eval_shuffle"] = False
+    p["num_workers"] = 6
 
 def create_iterator(p, dataset_params, data_loader_params):
   """ Instantiates the dataset of this module according to the dataset
