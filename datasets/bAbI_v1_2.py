@@ -60,7 +60,9 @@ def read_samples(file_path, word2idx):
 
 
 class bAbI10k(data.Dataset):
-  def __init__(self, partition, folder=DATA_PATH):
+  def __init__(self, partition, task=0, folder=DATA_PATH):
+    if task > 0:
+      partition = partition + "_t" + str(task)
     file_path = os.path.join(folder, bAbI10k_TEMPLATE.format(partition))
 
     with open(os.path.join(folder, "vocab.pkl"), "rb") as f:
@@ -77,7 +79,9 @@ class bAbI10k(data.Dataset):
 
 
 class bAbI1k(data.Dataset):
-  def __init__(self, partition, folder=DATA_PATH):
+  def __init__(self, partition, task=0, folder=DATA_PATH):
+    if task > 0:
+      partition = partition + "_t" + str(task)
     file_path = os.path.join(folder, bAbI1k_TEMPLATE.format(partition))
 
     with open(os.path.join(folder, "vocab.pkl"), "rb") as f:
