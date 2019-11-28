@@ -23,14 +23,13 @@ PAD = "<pad>"
 RA = "<ra>"
 
 
-def parse_file_to_samples(path, request_answer_token=RA):
-    """ returns [story:[str], answer:str] """
+def parse_file_to_samples(path, task, request_answer_token=RA):
+    """ returns [story:[str], (task_id:int, answer:str)] """
     f = open(path, "r")
     samples = []
     story = []
     for line in f:
         tid, text = line.lower().rstrip('\n').split(' ', 1)
-
         if tid == "1":
             # new story begins
             story = []
@@ -47,16 +46,18 @@ def parse_file_to_samples(path, request_answer_token=RA):
             current_story.extend(query_words)
             current_story.append("?")
             current_story.append(request_answer_token)
-            samples.append((list(current_story), answer))
+            samples.append((list(current_story), answer, task))
     f.close()
     return samples
 
 
 def read_task_files(dataset, partition):
-    """ returns [story:[str], answer:str] """
+    """ returns [story:[str], (task_id:int, answer:str)] """
     all_samples = []
     for task in list(range(1, 21)):
-        s = parse_file_to_samples(DATA_PATH.format(dataset, task, partition))
+        s = parse_file_to_samples(
+              path=DATA_PATH.format(dataset, task, partition),
+              task=task)
         # print("taks {}: {} samples".format(task, len(s)))
         all_samples.extend(s)
     return all_samples
@@ -71,19 +72,6 @@ def load_all_data():
             data[dataset][partition] = read_task_files(dataset, partition)
     return data
 
-
-def load_task_specific_eval_data():
-  data = {}
-  for dataset in DATASETS:
-      data[dataset] = {}
-      for partition in PARTITIONS:
-        if partition == "train":
-          continue
-        data[dataset][partition] = {}
-        for task in range(1, 21):
-          data[dataset][partition][task] = parse_file_to_samples(
-            DATA_PATH.format(dataset, task, partition))
-  return data
 
 def get_vocabulary(data):
     """ returns [] """
@@ -110,25 +98,12 @@ def write_files(data, path):
             random.shuffle(data[d][p])
             f = open(os.path.join(OUTPUT_PATH, "{}_{}.txt".format(d, p)), "w+")
             for sample in data[d][p]:
-                story = " ".join(sample[0])
-                line = story + '\t' + sample[1] + '\n'
-                f.write(line)
+              story = " ".join(sample[0])
+              answer = sample[1]
+              task = sample[2]
+              line = "{}\t{}\t{}\n".format(story, answer, task)
+              f.write(line)
             f.close()
-
-
-def write_task_eval_files(data, path):
-  for d in DATASETS:
-    for p in PARTITIONS:
-      if p == "train":
-        continue
-      for task in range(1, 21):
-        f = open(os.path.join(OUTPUT_PATH, "{}_{}_t{}.txt".format(d, p, task)),
-                 "w+")
-        for sample in data[d][p][task]:
-          story = " ".join(sample[0])
-          line = story + '\t' + sample[1] + '\n'
-          f.write(line)
-        f.close()
 
 
 def write_vocab(word2idx, idx2word, path):
@@ -138,15 +113,9 @@ def write_vocab(word2idx, idx2word, path):
 
 
 os.mkdir(OUTPUT_PATH)
-
 # process joint data
 all_data = load_all_data()
 write_files(all_data, OUTPUT_PATH)
-
-# process task specific validation data
-valid_task_data = load_task_specific_eval_data()
-write_task_eval_files(valid_task_data, OUTPUT_PATH)
-
 # vocab
 word2idx, idx2word = get_vocabulary(all_data)
 write_vocab(word2idx, idx2word, OUTPUT_PATH)

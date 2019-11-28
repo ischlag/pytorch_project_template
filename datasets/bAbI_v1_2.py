@@ -50,7 +50,7 @@ def read_samples(file_path, word2idx):
   samples = []
   with open(file_path, "r") as f:
     for line in f:
-      story, target = line.rstrip('\n').split("\t")
+      story, target, task = line.rstrip('\n').split("\t")
       words = story.split(" ")
       # encode samples
       x = [word2idx[word] for word in words]
@@ -60,14 +60,10 @@ def read_samples(file_path, word2idx):
 
 
 class bAbI10k(data.Dataset):
-  def __init__(self, partition, task=0, folder=DATA_PATH):
-    if task > 0:
-      partition = partition + "_t" + str(task)
+  def __init__(self, partition, folder=DATA_PATH):
     file_path = os.path.join(folder, bAbI10k_TEMPLATE.format(partition))
-
     with open(os.path.join(folder, "vocab.pkl"), "rb") as f:
       self.word2idx, self.idx2word = pickle.load(f)
-
     self.samples = read_samples(file_path, self.word2idx)
 
   def __len__(self):
@@ -79,14 +75,10 @@ class bAbI10k(data.Dataset):
 
 
 class bAbI1k(data.Dataset):
-  def __init__(self, partition, task=0, folder=DATA_PATH):
-    if task > 0:
-      partition = partition + "_t" + str(task)
+  def __init__(self, partition, folder=DATA_PATH):
     file_path = os.path.join(folder, bAbI1k_TEMPLATE.format(partition))
-
     with open(os.path.join(folder, "vocab.pkl"), "rb") as f:
       self.word2idx, self.idx2word = pickle.load(f)
-
     self.samples = read_samples(file_path, self.word2idx)
 
   def __len__(self):
