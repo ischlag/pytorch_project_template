@@ -18,10 +18,20 @@ NECESSARY_PARAMS = [
   "max_steps",  # -1 runs indefinitely
   "write_logs",
   "early_stopping_steps",  # -1 ignores early stopping
+  "RA",  # id of "request answer"-token
 ]
 
 
-class BasicTrainer:
+def load_default_params(p):
+  p.log_every_n_steps = 50
+  p.eval_every_n_steps = 500
+  p.log_folder = "logs/"
+  p.max_steps = -1
+  p.write_logs = True
+  p.early_stopping_steps = -1
+
+
+class Trainer:
   """
   Trainer object that keeps track of the training state with some features:
   - saves best and last model after every evaluation

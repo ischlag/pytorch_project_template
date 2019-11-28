@@ -1,6 +1,8 @@
 class Map(dict):
   """
-  A map with where keys can be accessed using the "."
+  A map with where keys can be accessed using the ".".
+
+  Note:
 
   Example:
   m = Map()
@@ -25,6 +27,8 @@ class Map(dict):
 
   def __getattr__(self, key):
     # is called when: m.a
+    if key == "__dict__":
+      return self.__dict__  # meh ...
     return self.get(key)
 
   def __setattr__(self, key, value):
@@ -49,8 +53,9 @@ class Map(dict):
     super(Map, self).__delitem__(key)
     del self.__dict__[key]
 
-  def __getdict__(self):
-    return self.__getdict__
-
-  def __setdict__(self, dict):
-    self.__dict__ = dict
+  def __repr__(self):
+    # string representation
+    entries = []
+    for k in self.keys():
+      entries.append("{}={}".format(k, self.get(k)))
+    return "Map(" + ", ".join(entries) + ")"

@@ -1,13 +1,49 @@
 import os
 import pickle
 import torch
+import importlib
 from torch.utils import data
 from torch.nn.utils.rnn import pad_sequence
+
 
 bAbI10k_TEMPLATE = "en-valid-10k_{}.txt"
 bAbI1k_TEMPLATE = "en-valid_{}.txt"
 PARTITIONS = ["train", "valid", "test"]
 DATA_PATH = "data/bAbI_v1.2"
+
+
+def load_default_params(p):
+    p.dataset_variation = "bAbI10k"
+    p.train_shuffle = True
+    p.eval_shuffle = False
+    p.num_workers = 6
+
+def create_iterator(p, dataset_params, data_loader_params):
+  """ Instantiates the dataset of this module according to the dataset
+  parameters and creates a dataloader using data.Dataloader according to
+  the data_loader_params arguments. """
+  # instantiate one of the bAbI datasets
+  _module = importlib.import_module("datasets.bAbI_v1_2")
+  _class = getattr(_module, dataset_params["variation"])
+
+  dataset = _class(partition=dataset_params["partition"])
+  p.PAD = dataset.word2idx["<pad>"]
+  p.RA = dataset.word2idx["<ra>"]
+
+  # create data loader
+  def collate_pad_seq_classification(batch):
+    (batch_x, batch_y) = zip(*batch)
+    x = [torch.tensor(x) for x in batch_x]
+    y = torch.tensor(batch_y).unsqueeze(-1)
+
+    x_pad = pad_sequence(x, batch_first=True, padding_value=p.PAD)
+    y_pad = pad_sequence(y, batch_first=True, padding_value=p.PAD)
+
+    return x_pad, y_pad
+
+  return data.DataLoader(dataset,
+                         collate_fn=collate_pad_seq_classification,
+                         **data_loader_params)
 
 
 def read_samples(file_path, word2idx):
@@ -21,22 +57,6 @@ def read_samples(file_path, word2idx):
       y = word2idx[target]
       samples.append((x, y))
   return samples
-
-
-def create_iterator(dataset, pad_value, data_loader_params):
-  def collate_pad_seq_classification(batch):
-    (batch_x, batch_y) = zip(*batch)
-    x = [torch.tensor(x) for x in batch_x]
-    y = torch.tensor(batch_y).unsqueeze(-1)
-
-    x_pad = pad_sequence(x, batch_first=True, padding_value=pad_value)
-    y_pad = pad_sequence(y, batch_first=True, padding_value=pad_value)
-
-    return x_pad, y_pad
-
-  return data.DataLoader(dataset,
-                         collate_fn=collate_pad_seq_classification,
-                         **data_loader_params)
 
 
 class bAbI10k(data.Dataset):

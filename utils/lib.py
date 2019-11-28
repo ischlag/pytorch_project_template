@@ -2,6 +2,7 @@ import time
 import os
 import shutil
 import logging
+import importlib
 
 
 def assert_entries_exist(map, keys):
@@ -9,6 +10,11 @@ def assert_entries_exist(map, keys):
   for k in keys:
     if k not in map.__dict__.keys():
       raise AttributeError("Necessary parameter {} is missing!".format(k))
+
+
+def count_parameters(model):
+  """ returns the total number of parameters of a pytorch model. """
+  return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def terminal_format(args):
@@ -28,6 +34,8 @@ def terminal_format(args):
 
 
 def add_scalars(writer, scalars, global_step):
+  """ Small helper function in order to perform multiple tensorboard
+  write operations. """
   for s in scalars:
     writer.add_scalar(s[0], s[1], global_step=global_step)
 
@@ -69,16 +77,13 @@ def save_current_script(log_folder):
   if the source_code folder already exists. """
   source_folder = os.getcwd()
   target_folder = os.path.join(log_folder, "source_code")
-
   if os.path.exists(target_folder):
     # do not copy scripts if folder alreay exists
     return
-
   # create target folder
   print("Taking scripts from {}".format(source_folder))
   print("... and saving them in {}".format(target_folder))
   os.makedirs(target_folder)
-
   # recursively copy all python files
   for path, _, file_names in os.walk(os.getcwd()):
     # skip log_folder itself
@@ -94,14 +99,28 @@ def save_current_script(log_folder):
 
 
 def setup_logger(log_folder, file_name="output.log"):
-  logger = logging.getLogger("custom_logger")
-  logger.setLevel(logging.DEBUG)
-  logger.addHandler(logging.StreamHandler())
+  logger = logging.getLogger()
+  logger.handlers = []
+  logger.setLevel(logging.INFO)
+  # create terminal handler
+  s_handler = logging.StreamHandler()
+  s_format = logging.Formatter('%(message)s')
+  s_handler.setFormatter(s_format)
+  logger.addHandler(s_handler)
+  # create file handler
   if log_folder is not None:
-    logger.addHandler(logging.FileHandler(os.path.join(log_folder, file_name)))
+    f_handler = logging.FileHandler(os.path.join(log_folder, file_name))
+    f_format = logging.Formatter('%(asctime)s - %(message)s')
+    f_handler.setFormatter(f_format)
+    logger.addHandler(f_handler)
 
-  return lambda *x: logger.debug((x[0].replace('{', '{{').replace('}', '}}')
-                                  + "{} " * (len(x)-1)).format(*x[1:]))
+  return lambda *x: logger.info((x[0].replace('{', '{{').replace('}', '}}')
+                                 + "{} " * (len(x)-1)).format(*x[1:])), logger
+
+
+def import_and_populate(module_name, p):
+  _module = importlib.import_module(module_name)
+  return _module.load_default_params(p)
 
 
 class StopWatch:

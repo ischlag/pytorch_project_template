@@ -6,15 +6,16 @@
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
-from utils.Map import Map
-
-params = Map()
-params.embedding_size = 200
-params.hidden_size = 256
-params.layers = 2
 
 
-class SeqClassifierLSTM(nn.Module):
+def load_default_params(p):
+    p.vocab_size = 180
+    p.embedding_size = 200
+    p.hidden_size = 256
+    p.layers = 2
+
+
+class Model(nn.Module):
   def __init__(self, params):
     super().__init__()
     self.p = p = params
