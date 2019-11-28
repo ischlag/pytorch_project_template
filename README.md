@@ -1,6 +1,6 @@
 # PyTorch Project Template
 
-My personal template for projects that require code for multiple datasets and multiple models. The code is not supposed to be used as a framework but as a starting point for such kind of projects.
+A personal template for projects that use multiple datasets and multiple models. The code is not supposed to be used as a framework but as a starting point with a focus on flexibility.
 
 ## Works with
 ```
@@ -33,4 +33,4 @@ This code base comes with the following features:
 		- optional maximum number of steps
 		- saves last and best model whenever the evaluation loop has finished
 
-While the models and datasets are somewhat general, the trainer is most likely going to be rather project specific and will require some changes according to your needs. The code was written such that this is (hopefully) easy to do.
+While the models and datasets are somewhat general, the trainer is most likely require more project/problem specific changes. The code was written such that this is (hopefully) easy to do.
