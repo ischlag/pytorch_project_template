@@ -3,7 +3,7 @@ import importlib
 import torch
 import torch.nn as nn
 from sacred import Experiment
-from munch import Munch, munchify, unmunchify
+from munch import munchify
 
 from utils.lib import import_and_populate
 from utils.lib import setup_log_folder, save_current_script, setup_logger, \
