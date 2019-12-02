@@ -51,6 +51,7 @@ def main_config():
     p["n_gpus"],
   ]
   p["log_folder"] = folder_template.format(*folder_args)
+  p["force"] = 0
 
 
 @ex.automain
