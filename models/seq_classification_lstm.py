@@ -24,6 +24,7 @@ class Model(nn.Module):
                         hidden_size=p.hidden_size,
                         num_layers=p.layers)
     self.linear = nn.Linear(p.hidden_size, p.vocab_size)
+    self.reset_parameters()
 
   def forward(self, x):
     x_len = (x == self.p.RA).nonzero()[:, 1] + 1
@@ -41,3 +42,8 @@ class Model(nn.Module):
     last_rnn_outputs = output_padded[ra_pos, :]
     logits = self.linear(last_rnn_outputs)
     return logits
+
+  def reset_parameters(self):
+    for layer in self.lstm.all_weights:
+      # set bias_ih_l to 1
+      layer[3].data[self.p.hidden_size:2 * self.p.hidden_size] = 1
