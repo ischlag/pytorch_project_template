@@ -87,7 +87,7 @@ def save_current_script(log_folder):
   # recursively copy all python files
   for path, _, file_names in os.walk(os.getcwd()):
     # skip log_folder itself
-    if path.find(log_folder) >= 0:
+    if path.find(log_folder) >= 0 or path.find("logs"):
       continue
     for name in file_names:
       if name[-3:] == ".py":
