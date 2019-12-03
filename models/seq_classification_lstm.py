@@ -45,5 +45,6 @@ class Model(nn.Module):
 
   def reset_parameters(self):
     for layer in self.lstm.all_weights:
-      # set bias_ih_l to 1
+      # set forget gate  bias to 1
       layer[3].data[self.p.hidden_size:2 * self.p.hidden_size] = 1
+      layer[2].data[self.p.hidden_size:2 * self.p.hidden_size] = 0
