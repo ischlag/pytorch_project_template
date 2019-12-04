@@ -21,7 +21,7 @@ def main_config():
   # we cannot use a Munch here due to sacred. Don't try.
   p = {}
   p["device"] = torch.device("cuda")
-  p["n_gpus"] = torch.cuda.device_count()
+  p["n_gpus"] = 1  # torch.cuda.device_count()
   # data
   p["dataset_name"] = "bAbI_v1_2"
   p["dataset_variation"] = "bAbI10k"
@@ -39,7 +39,8 @@ def main_config():
   p["trainer_name"] = "basic_trainer"
   import_and_populate(TRAINERS + "." + p["trainer_name"], p)
   # other
-  folder_template = "logs/{}/{}/emb{}_h{}_l{}_lr{}_bs{}_gpus{}"
+  p["run"] = ""
+  folder_template = "logs/{}/{}/emb{}_h{}_l{}_lr{}_bs{}_gpus{}_{}"
   folder_args = [
     p["dataset_variation"],
     p["model_name"],
@@ -49,6 +50,7 @@ def main_config():
     p["learning_rate"],
     p["train_batch_size"],
     p["n_gpus"],
+    p["run"],
   ]
   p["log_folder"] = folder_template.format(*folder_args)
   p["force"] = 0
@@ -112,7 +114,7 @@ def run(p, _log):
   # DataParallel over multiple GPUs
   if p.n_gpus > 1:
     log("{} GPUs detected. Using nn.DataParallel. Batch-size per GPU: {}"
-        .format(p.n_gpus, p.batch_size // p.n_gpus))
+        .format(p.n_gpus, p.train_batch_size // p.n_gpus))
     model = nn.DataParallel(model)
 
   # create trainer

@@ -3,7 +3,8 @@ import logging
 import os
 import shutil
 import time
-
+import pickle
+import csv
 
 def assert_entries_exist(map, keys):
   """ raises an attribute error if any on the keys does not exist. """
@@ -33,11 +34,14 @@ def terminal_format(args):
   return line
 
 
-def add_scalars(writer, scalars, global_step):
+def tf_add_scalars(writer, labels, scalars):
   """ Small helper function in order to perform multiple tensorboard
   write operations. """
-  for s in scalars:
-    writer.add_scalar(s[0], s[1], global_step=global_step)
+  assert len(labels) == len(scalars)
+  global_step = scalars[0]
+  for i in range(1, len(labels)):
+    writer.add_scalar(labels[i], scalars[i], global_step=global_step)
+  writer.flush()
 
 
 def setup_log_folder(path, force=0):
@@ -81,20 +85,19 @@ def save_current_script(log_folder):
     # do not copy scripts if folder alreay exists
     return
   # create target folder
-  print("Taking scripts from {}".format(source_folder))
-  print("... and saving them in {}".format(target_folder))
   os.makedirs(target_folder)
   # recursively copy all python files
-  for path, _, file_names in os.walk(os.getcwd()):
-    # skip log_folder itself
-    if path.find(log_folder) >= 0 or path.find("logs"):
+  for path, _, file_names in os.walk("."):
+    # skip log_folder itself or any folder with name logs
+    if path.find(log_folder) >= 0 or path.find("logs") >= 0:
       continue
     for name in file_names:
       if name[-3:] == ".py":
-        trg_path = path.replace(source_folder, target_folder)
+        src_path = os.path.join(source_folder, path)
+        trg_path = os.path.join(source_folder, target_folder, path)
         if not os.path.exists(trg_path):
           os.makedirs(trg_path)
-        shutil.copyfile(src=os.path.join(path, name),
+        shutil.copyfile(src=os.path.join(src_path, name),
                         dst=os.path.join(trg_path, name))
 
 
@@ -118,9 +121,32 @@ def setup_logger(log_folder, file_name="output.log"):
                                  + "{} " * (len(x)-1)).format(*x[1:])), logger
 
 
+def save_config(params, path, file_name):
+    # dump sacred config to file if it doesn't exist
+    conf_file = os.path.join(path, file_name)
+    if not os.path.exists(conf_file):
+      with open(conf_file, "wb+") as f:
+        pickle.dump(params, f)
+
+
 def import_and_populate(module_name, p):
   _module = importlib.import_module(module_name)
   return _module.load_default_params(p)
+
+
+class CsvWriter:
+  def __init__(self, column_names, path, file_name):
+    self.csv_file = os.path.join(path, file_name)
+    self.file = open(self.csv_file, "w+")
+    self.writer = csv.writer(self.file)
+    self.writer.writerow(column_names)
+
+  def write(self, values):
+    self.writer.writerow(values)
+    self.file.flush()
+
+  def close(self):
+    self.file.close()
 
 
 class StopWatch:

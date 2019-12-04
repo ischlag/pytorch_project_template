@@ -5,13 +5,14 @@ import torch
 from tensorboardX import SummaryWriter
 
 from munch import Munch, munchify
-from utils.lib import assert_entries_exist, terminal_format, StopWatch, \
-  add_scalars
+from utils.lib import *
 
 BEST_MODEL_FILE_NAME = "best_eval_state.pt"
 LAST_MODEL_FILE_NAME = "last_eval_state.pt"
 TF_TRAIN_FOLDER_NAME = "train"
 TF_EVAL_FOLDER_NAME = "valid"
+CSV_FILE_NAME = "exp_logging.csv"
+CONFIG_FILE_NAME = "exp.pickle"
 NECESSARY_PARAMS = [
   "log_every_n_steps",
   "eval_every_n_steps",
@@ -21,6 +22,13 @@ NECESSARY_PARAMS = [
   "write_logs",
   "early_stopping_steps",  # -1 ignores early stopping
   "RA",  # id of "request answer"-token
+]
+LABELS = [
+  "step",
+  "loss",
+  "accuracy",
+  "batches_per_sec",
+  "tokens_per_sec",
 ]
 
 
@@ -75,10 +83,25 @@ class Trainer:
     # tensorflow events paths (tensorboard)
     self.tb_train_path = os.path.join(self.p.log_folder, TF_TRAIN_FOLDER_NAME)
     self.tb_eval_path = os.path.join(self.p.log_folder, TF_EVAL_FOLDER_NAME)
-    self.train_writer = SummaryWriter(self.tb_train_path) if self.p.write_logs\
-                                                          else None
-    self.eval_writer = SummaryWriter(self.tb_eval_path) if self.p.write_logs\
-                                                        else None
+
+    self.tf_train_writer = None
+    self.tf_eval_writer = None
+    self.csv_train_writer = None
+    self.csv_eval_writer = None
+
+    if self.p.write_logs:
+      # create summary writer
+      self.tf_train_writer = SummaryWriter(self.tb_train_path)
+      self.tf_eval_writer = SummaryWriter(self.tb_eval_path)
+      # create csv log file if nonexistent
+      self.csv_train_writer = CsvWriter(column_names=LABELS,
+                                        path=self.tb_train_path,
+                                        file_name=CSV_FILE_NAME)
+      self.csv_eval_writer = CsvWriter(column_names=LABELS,
+                                       path=self.tb_eval_path,
+                                       file_name=CSV_FILE_NAME)
+      # store sacred params
+      save_config(self.p, self.p.log_folder, CONFIG_FILE_NAME)
 
     # continue training where the last state ended (if it exists)
     if os.path.exists(self.last_eval_state_path):
@@ -169,16 +192,15 @@ class Trainer:
         ]
         self.log(terminal_format(vars))
 
-        # write tensorboard summaries
+        # write tensorboard/csv summaries
         if self.p.write_logs:
-          scalars = [
-            ("loss", avg_loss),
-            ("accuracy", avg_acc),
-            ("batches_per_sec", batches_per_sec),
-            ("tokens_per_sec", tokens_per_sec),
-          ]
-          add_scalars(self.train_writer, scalars, self.state.global_step)
-          self.train_writer.flush()
+          scalars = [self.state.global_step,
+                     avg_loss,
+                     avg_acc,
+                     batches_per_sec,
+                     tokens_per_sec]
+          tf_add_scalars(self.tf_train_writer, LABELS, scalars)
+          self.csv_train_writer.write(scalars)
           # restarts mess a little with tensorboard, saving the state here
           # would help to deal with that but it is a slow down for big models.
           # self.save_state(target=self.last_eval_state_path)
@@ -271,14 +293,13 @@ class Trainer:
 
     # write tensorboard summaries
     if write_logs:
-      scalars = [
-        ("loss", avg_loss),
-        ("accuracy", avg_acc),
-        ("batches_per_sec", batches_per_sec),
-        ("tokens_per_sec", tokens_per_sec),
-      ]
-      add_scalars(self.eval_writer, scalars, self.state.global_step)
-      self.eval_writer.flush()
+      scalars = [self.state.global_step,
+                 avg_loss,
+                 avg_acc,
+                 batches_per_sec,
+                 tokens_per_sec]
+      tf_add_scalars(self.tf_eval_writer, LABELS, scalars)
+      self.csv_eval_writer.write(scalars)
 
   def save_state(self, target):
     curr_state = {
