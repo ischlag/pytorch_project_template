@@ -7,6 +7,8 @@ A personal template for projects that use multiple datasets and multiple models.
 pip3 install --upgrade torch==1.3.0
 pip3 install --upgrade sacred==0.8.1
 pip3 install --upgrade munch==2.5.0
+pip3 install --upgrade tensorboardX==1.9.0
+pip3 install --upgrade numpy=1.17.2
 ```
 
 ## Usage
