@@ -7,6 +7,8 @@ A personal template for projects that use multiple datasets and multiple models.
 pip3 install --upgrade torch==1.3.0
 pip3 install --upgrade sacred==0.8.1
 pip3 install --upgrade munch==2.5.0
+pip3 install --upgrade tensorboardX==1.9.0
+pip3 install --upgrade numpy=1.17.2
 ```
 
 ## Usage
@@ -23,7 +25,9 @@ This code base comes with the following features:
 - modular datasets
 	- bAbI v1.2
 - modular models
-	- simple sequence classification lstm
+	- simple sequence classification lstm (using nn.LSTM)
+	- simple sequence classification jitlstm (TorchScript)
+	- simple sequence classification naivelstm (just PyTorch)
 - modular trainers
 	- basic_trainer
 		- manages train and evaluation loop
