@@ -25,7 +25,9 @@ This code base comes with the following features:
 - modular datasets
 	- bAbI v1.2
 - modular models
-	- simple sequence classification lstm
+	- simple sequence classification lstm (using nn.LSTM)
+	- simple sequence classification jitlstm (TorchScript)
+	- simple sequence classification naivelstm (just PyTorch)
 - modular trainers
 	- basic_trainer
 		- manages train and evaluation loop
